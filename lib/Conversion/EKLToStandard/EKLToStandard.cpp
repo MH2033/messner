@@ -21,7 +21,6 @@
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/ErrorHandling.h>
-#include <llvm/Support/LogicalResult.h>
 #include <mlir/Dialect/Index/IR/IndexAttrs.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/BuiltinTypes.h>
@@ -115,7 +114,7 @@ struct ConvertUnify : OpConversionPattern<ekl::UnifyOp> {
                     asInt,
                     getTypeBound(op.getType()));
                 return success();
-            } else if (resultTy.isInteger()) {
+            } else if (llvm::isa<mlir::IntegerType>(resultTy)) {
                 // index -> int
                 rewriter.replaceOpWithNewOp<index::CastUOp>(
                     op,
@@ -123,10 +122,10 @@ struct ConvertUnify : OpConversionPattern<ekl::UnifyOp> {
                     adaptor.getOperand());
                 return success();
             }
-        } else if (inTy.isInteger()) {
+        } else if (llvm::isa<mlir::IntegerType>(inTy)) {
             const auto inSigned =
                 getTypeBound(op.getOperand().getType()).isSignedInteger();
-            if (resultTy.isInteger()) {
+            if (llvm::isa<mlir::IntegerType>(resultTy)) {
                 // int -> int
                 if (inSigned) {
                     rewriter.replaceOpWithNewOp<arith::ExtSIOp>(
@@ -218,8 +217,8 @@ struct ConvertCoerce : OpConversionPattern<ekl::CoerceOp> {
                 toInt,
                 getTypeBound(op.getType()));
             return success();
-        } else if (inTy.isInteger()) {
-            if (resultTy.isInteger()) {
+        } else if (llvm::isa<mlir::IntegerType>(inTy)) {
+            if (llvm::isa<mlir::IntegerType>(resultTy)) {
                 // int -> int
                 rewriter.replaceOpWithNewOp<arith::TruncIOp>(
                     op,
@@ -244,7 +243,7 @@ struct ConvertCoerce : OpConversionPattern<ekl::CoerceOp> {
                 return success();
             }
         } else if (llvm::isa<FloatType>(inTy)) {
-            if (resultTy.isInteger()) {
+            if (llvm::isa<mlir::IntegerType>(resultTy)) {
                 // float -> int
                 const auto outSigned =
                     getTypeBound(op.getType()).isSignedInteger();
@@ -331,7 +330,7 @@ struct ConvertCompare : OpConversionPattern<ekl::CompareOp> {
                 adaptor.getLhs(),
                 adaptor.getRhs());
             return success();
-        } else if (lhsTy.isInteger()) {
+        } else if (llvm::isa<mlir::IntegerType>(lhsTy)) {
             if (lhsTy.isSignedInteger()) {
                 rewriter.replaceOpWithNewOp<arith::CmpIOp>(
                     op,
@@ -440,7 +439,7 @@ struct ConvertBinary : OpConversionPattern<Source> {
             }
         }
 
-        if (lhsTy.isInteger()) {
+        if (llvm::isa<mlir::IntegerType>(lhsTy)) {
             if (lhsTy.isSignedInteger()) {
                 rewriter.replaceOpWithNewOp<TargetSI>(
                     op,
@@ -487,7 +486,7 @@ struct ConvertNegate : OpConversionPattern<ekl::NegateOp> {
         ConversionPatternRewriter &rewriter) const final
     {
         const auto inTy = adaptor.getOperand().getType();
-        if (inTy.isInteger()) {
+        if (llvm::isa<mlir::IntegerType>(inTy)) {
             const auto zero = rewriter
                                   .create<arith::ConstantOp>(
                                       op.getLoc(),

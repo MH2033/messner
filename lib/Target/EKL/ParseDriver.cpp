@@ -83,11 +83,12 @@ OwningOpRef<ProgramOp> ParseDriver::takeResult()
     if (getNumErrors() > 0) {
         emitError("failed to parse input");
 
-        LLVM_DEBUG(llvm::dbgs() << "[Parser] dumping IR before delete:\n";
-                   m_result->print(
-                       llvm::dbgs(),
-                       OpPrintingFlags{}.printGenericOpForm());
-                   llvm::dbgs() << "\n");
+        LLVM_DEBUG(
+            llvm::dbgs() << "[Parser] dumping IR before delete:\n";
+            m_result->print(
+                llvm::dbgs(),
+                OpPrintingFlags{}.printGenericOpForm());
+            llvm::dbgs() << "\n");
 
         m_result.release();
     } else if (hasWarnings())
@@ -600,7 +601,7 @@ FailureOr<ConstExpr> ParseDriver::endConstexpr(Expr expr)
             return failure();
 
         // Apply all of our known constant evaluation patterns.
-        if (failed(applyPatternsGreedily(
+        if (failed(applyPatternsAndFoldGreedily(
                 cexprOp.getBodyRegion(),
                 *m_constexprPatterns)))
             return failure();

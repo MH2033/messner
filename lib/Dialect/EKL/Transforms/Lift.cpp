@@ -26,7 +26,6 @@
 #include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/TypeSwitch.h>
-#include <llvm/Support/LogicalResult.h>
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/Value.h>
@@ -100,11 +99,12 @@ struct SplitReduction : OpRewritePattern<ReduceOp> {
             }
             source.getMap()->eraseArguments(0, numDims - 1U);
 
-            source.getResult().setType(ExpressionType::get(
-                getContext(),
-                ArrayType::get(
-                    arrayTy.getScalarType(),
-                    arrayTy.getExtents().back())));
+            source.getResult().setType(
+                ExpressionType::get(
+                    getContext(),
+                    ArrayType::get(
+                        arrayTy.getScalarType(),
+                        arrayTy.getExtents().back())));
         });
         axes.push_back(source);
 
@@ -163,8 +163,9 @@ private:
         auto [it, compute] = m_liftable.try_emplace(value, false);
         if (!compute) return it->second;
 
-        return m_liftable.insert_or_assign(value, isLiftableImpl(value))
-            .first->second;
+        bool computed     = isLiftableImpl(value);
+        m_liftable[value] = computed;
+        return computed;
     }
     bool isLiftable(Operation *op)
     {
@@ -399,14 +400,15 @@ struct LiftAssoc : OpRewritePattern<AssocOp> {
         const auto maybeResult = prepareLiftAssoc(op, indices);
         if (failed(maybeResult) || !maybeResult->second) return failure();
 
-        LLVM_DEBUG(llvm::dbgs() << "[LiftAssoc] op: ";
-                   op->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-                   llvm::dbgs() << "\n");
-        LLVM_DEBUG(llvm::dbgs() << "[LiftAssoc] top: ";
-                   maybeResult->first->print(
-                       llvm::dbgs(),
-                       OpPrintingFlags().skipRegions());
-                   llvm::dbgs() << "\n");
+        LLVM_DEBUG(
+            llvm::dbgs() << "[LiftAssoc] op: ";
+            op->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
+            llvm::dbgs() << "\n");
+        LLVM_DEBUG(
+            llvm::dbgs() << "[LiftAssoc] top: "; maybeResult->first->print(
+                llvm::dbgs(),
+                OpPrintingFlags().skipRegions());
+            llvm::dbgs() << "\n");
 
         const auto arrayTy = llvm::cast<ArrayType>(getTypeBound(op.getType()));
         SmallVector<extent_t> extents;
@@ -479,12 +481,14 @@ struct LiftReduce : OpRewritePattern<ReduceOp> {
         });
         if (reduce->getParentOp() == top || top == source) return failure();
 
-        LLVM_DEBUG(llvm::dbgs() << "[LiftReduce] reduce: ";
-                   reduce->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-                   llvm::dbgs() << "\n");
-        LLVM_DEBUG(llvm::dbgs() << "[LiftReduce] top: ";
-                   top->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-                   llvm::dbgs() << "\n");
+        LLVM_DEBUG(
+            llvm::dbgs() << "[LiftReduce] reduce: ";
+            reduce->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
+            llvm::dbgs() << "\n");
+        LLVM_DEBUG(
+            llvm::dbgs() << "[LiftReduce] top: ";
+            top->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
+            llvm::dbgs() << "\n");
 
         const auto scalarTy =
             llvm::cast<ScalarType>(getTypeBound(reduce.getType()));
@@ -540,7 +544,7 @@ static LogicalResult factorize(Operation *op)
     patterns.add<SplitReduction, LiftFactor, DistributeFactor>(
         patterns.getContext());
 
-    return applyPatternsGreedily(
+    return applyPatternsAndFoldGreedily(
         op,
         FrozenRewritePatternSet(std::move(patterns)));
 }
@@ -551,7 +555,7 @@ static LogicalResult lift(Operation *op)
 
     patterns.add<LiftAssoc, LiftReduce>(patterns.getContext());
 
-    return applyPatternsGreedily(
+    return applyPatternsAndFoldGreedily(
         op,
         FrozenRewritePatternSet(std::move(patterns)));
 }

@@ -25,6 +25,7 @@
 #include <llvm/Target/TargetOptions.h>
 #include <mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h>
 #include <mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h>
+#include <mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h>
 #include <mlir/Dialect/Bufferization/IR/Bufferization.h>
 #include <mlir/Dialect/ControlFlow/IR/ControlFlow.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
@@ -111,7 +112,7 @@ public:
                 || !llvm::isa<func::FuncOp>(dst.getOwner()->getParentOp()))
                 return WalkResult::advance();
 
-            IRRewriter rewriter(copy);
+            IRRewriter rewriter(copy.getContext());
             map->setOperand(0, dst);
             rewriter.eraseOp(copy);
             if (alloc->use_empty()) rewriter.eraseOp(alloc);
@@ -384,13 +385,12 @@ int main(int argc, char *argv[])
     registerConvertComplexToLLVMInterface(registry);
     cf::registerConvertControlFlowToLLVMInterface(registry);
     func::registerAllExtensions(registry);
-    tensor::registerAllExtensions(registry);
     registerConvertFuncToLLVMInterface(registry);
     index::registerConvertIndexToLLVMInterface(registry);
     registerConvertMathToLLVMInterface(registry);
     registerConvertMemRefToLLVMInterface(registry);
     registerConvertNVVMToLLVMInterface(registry);
-    registerConvertOpenMPToLLVMInterface(registry);
+    // registerConvertOpenMPToLLVMInterface(registry);
     ub::registerConvertUBToLLVMInterface(registry);
 
     // Invoke the compiler.

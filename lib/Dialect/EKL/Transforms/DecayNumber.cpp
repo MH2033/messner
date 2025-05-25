@@ -19,7 +19,6 @@
 #include "llvm/Support/Debug.h"
 
 #include <llvm/ADT/STLExtras.h>
-#include <llvm/Support/LogicalResult.h>
 
 using namespace mlir;
 using namespace mlir::ekl;
@@ -211,7 +210,7 @@ void DecayNumberPass::runOnOperation()
 
     populateDecayNumberPatterns(patterns);
 
-    if (failed(applyPatternsGreedily(
+    if (failed(applyPatternsAndFoldGreedily(
             getOperation(),
             FrozenRewritePatternSet(std::move(patterns)))))
         signalPassFailure();

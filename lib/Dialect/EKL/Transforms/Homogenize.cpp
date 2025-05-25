@@ -232,7 +232,7 @@ void HomogenizePass::runOnOperation()
 
     populateHomogenizePatterns(patterns);
 
-    if (failed(applyPatternsGreedily(
+    if (failed(applyPatternsAndFoldGreedily(
             getOperation(),
             FrozenRewritePatternSet(std::move(patterns)))))
         signalPassFailure();

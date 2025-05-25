@@ -15,7 +15,6 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/TypeSwitch.h>
 #include <llvm/Support/Casting.h>
-#include <llvm/Support/LogicalResult.h>
 #include <mlir/IR/Attributes.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/MLIRContext.h>
@@ -294,9 +293,10 @@ struct MergeSubscripts : OpRewritePattern<SubscriptOp> {
                 "requires at most one ellipsis");
 
         // Create a new subscript by concatenating the prefix with suffix.
-        const auto indices = llvm::to_vector(llvm::concat<Value>(
-            prefix.getSubscripts(),
-            suffix.getSubscripts()));
+        const auto indices = llvm::to_vector(
+            llvm::concat<Value>(
+                prefix.getSubscripts(),
+                suffix.getSubscripts()));
         rewriter.replaceOpWithNewOp<SubscriptOp>(
             suffix,
             prefix.getArray(),
@@ -354,10 +354,11 @@ struct InlineBroadcastSubscript : OpRewritePattern<SubscriptOp> {
                 arrayTy);
             rewriter.replaceAllUsesExcept(op, sunken, sunken);
             rewriter.modifyOpInPlace(op, [&]() {
-                op.getResult().setType(ExpressionType::get(
-                    getContext(),
-                    inTy.cloneWith(
-                        inTy.getExtents().take_back(arrayTy.getNumExtents()))));
+                op.getResult().setType(
+                    ExpressionType::get(
+                        getContext(),
+                        inTy.cloneWith(inTy.getExtents().take_back(
+                            arrayTy.getNumExtents()))));
             });
         }
         return success();
@@ -751,9 +752,10 @@ struct HoistCastBeforeBroadcast : OpRewritePattern<Cast> {
         rewriter.replaceAllUsesExcept(op, sink, sink);
         rewriter.modifyOpInPlace(op, [&]() {
             op.setOperand(bcast.getOperand());
-            op.getResult().setType(ExpressionType::get(
-                rewriter.getContext(),
-                inTy.cloneWith(outTy.getScalarType())));
+            op.getResult().setType(
+                ExpressionType::get(
+                    rewriter.getContext(),
+                    inTy.cloneWith(outTy.getScalarType())));
         });
         return success();
     }

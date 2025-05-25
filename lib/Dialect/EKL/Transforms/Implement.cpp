@@ -62,20 +62,23 @@ protected:
             [&](OpBuilder &builder, Location loc, ValueRange operands) {
                 IRMapping mapping;
                 for (unsigned i = 0; i < op->getNumOperands(); ++i) {
-                    operands[i].setType(ExpressionType::get(
-                        rewriter.getContext(),
-                        getScalarType(
-                            llvm::cast<ExpressionType>(op->getOperandTypes()[i])
-                                .getTypeBound())));
+                    operands[i].setType(
+                        ExpressionType::get(
+                            rewriter.getContext(),
+                            getScalarType(
+                                llvm::cast<ExpressionType>(
+                                    op->getOperandTypes()[i])
+                                    .getTypeBound())));
                     mapping.map(op->getOperand(i), operands[i]);
                 }
 
                 auto elOp = builder.insert(op->clone(mapping));
-                elOp->getResult(0).setType(ExpressionType::get(
-                    rewriter.getContext(),
-                    getScalarType(
-                        llvm::cast<ExpressionType>(op->getResultTypes()[0])
-                            .getTypeBound())));
+                elOp->getResult(0).setType(
+                    ExpressionType::get(
+                        rewriter.getContext(),
+                        getScalarType(
+                            llvm::cast<ExpressionType>(op->getResultTypes()[0])
+                                .getTypeBound())));
                 builder.create<YieldOp>(loc, elOp->getResult(0));
             },
             resultTy);
@@ -268,7 +271,7 @@ void ImplementPass::runOnOperation()
 
     populateImplementPatterns(patterns);
 
-    if (failed(applyPatternsGreedily(
+    if (failed(applyPatternsAndFoldGreedily(
             getOperation(),
             FrozenRewritePatternSet(std::move(patterns)))))
         signalPassFailure();
